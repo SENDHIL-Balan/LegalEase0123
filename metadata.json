@@ -1,0 +1,6 @@
+{
+  "name": "LegalEase AI",
+  "description": "Create, understand, and manage professional legal documents with AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
