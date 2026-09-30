@@ -4,8 +4,17 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
+  const groqApiKey = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY || '';
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      'import.meta.env.VITE_GROQ_API_KEY': JSON.stringify(groqApiKey),
+      'process.env.GROQ_API_KEY': JSON.stringify(groqApiKey),
+      'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(geminiApiKey),
+      'process.env.GEMINI_API_KEY': JSON.stringify(geminiApiKey),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
