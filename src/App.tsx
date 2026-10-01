@@ -35,7 +35,8 @@ import {
   AlertCircle,
   Menu,
   Terminal,
-  Cpu
+  Cpu,
+  Loader2
 } from 'lucide-react';
 
 import {
@@ -55,6 +56,15 @@ import {
   saveDocumentToLocal,
   deleteDocumentFromLocal
 } from './utils/aiGenerator';
+import { exportDocument } from './utils/documentExporter';
+import {
+  DocumentCategoryFilter,
+  DocumentCategory,
+  getDocumentCategory,
+  CATEGORY_OPTIONS
+} from './components/DocumentCategoryFilter';
+import { EmptyDocumentsIllustration } from './components/EmptyDocumentsIllustration';
+import { DocumentGeneratingAnimation } from './components/DocumentGeneratingAnimation';
 
 const EMPTY_WIZARD_DATA: DocumentWizardData = {
   document_type: '',
@@ -123,6 +133,7 @@ export default function App() {
   const [currentDoc, setCurrentDoc] = useState<StructuredDocument | null>(null);
   const [templates, setTemplates] = useState<TemplateDefinition[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<DocumentCategory>('all');
 
   // Wizard state - Starts completely clean without fake pre-filled data
   const [wizardStep, setWizardStep] = useState<number>(1);
@@ -215,6 +226,23 @@ export default function App() {
     }
 
     return true;
+  };
+
+  const [processingStep, setProcessingStep] = useState<number | null>(null);
+
+  const handleContinueToStep = (fromStep: number, targetStep: number) => {
+    setAttemptedSubmit(true);
+    if (!validateStep(fromStep)) {
+      return;
+    }
+    setValidationError('');
+    setAttemptedSubmit(false);
+    setProcessingStep(targetStep);
+    setTimeout(() => {
+      setWizardStep(targetStep);
+      setProcessingStep(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 380);
   };
 
   const handleStartNewBlankDocument = () => {
@@ -331,17 +359,23 @@ export default function App() {
   // Start Generation Flow
   const handleGenerate = async () => {
     setIsGenerating(true);
-    setGenerationProgress(20);
+    setGenerationProgress(15);
 
     const stepInterval = setInterval(() => {
-      setGenerationProgress(prev => (prev < 90 ? prev + 25 : prev));
-    }, 350);
+      setGenerationProgress(prev => {
+        if (prev < 40) return prev + 12;
+        if (prev < 70) return prev + 8;
+        if (prev < 90) return prev + 4;
+        return prev;
+      });
+    }, 280);
 
     try {
       const doc = await generateDocumentWithAI(wizardData);
 
-      clearInterval(stepInterval);
       setGenerationProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      clearInterval(stepInterval);
 
       setDocuments(prev => [doc, ...prev.filter(d => d.id !== doc.id)]);
       setCurrentDoc(doc);
@@ -352,6 +386,8 @@ export default function App() {
       showToast('Legal instrument successfully generated!', 'success');
     } catch {
       clearInterval(stepInterval);
+      setGenerationProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 300));
       const fallback = generateClientDeterministicDoc(wizardData);
       saveDocumentToLocal(fallback);
       setDocuments(prev => [fallback, ...prev.filter(d => d.id !== fallback.id)]);
@@ -416,56 +452,38 @@ export default function App() {
     if (!docToExport) return;
 
     setDownloadingFormat(format);
-    const safeTitle = docToExport.title.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 32);
+    const safeTitle = (docToExport.title || 'legal_document').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 32);
 
     try {
-      // Use direct export endpoint
-      const endpoint = `/api/export-direct/${format}`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(docToExport)
-      });
-
-      if (!res.ok) {
-        // Fallback to client-side text export
-        let content = `${docToExport.title.toUpperCase()}\n`;
-        content += `Effective Date: ${docToExport.effective_date}\n`;
-        content += `Jurisdiction: ${docToExport.jurisdiction}\n\n`;
-        for (const sec of docToExport.sections) {
-          content += `${sec.heading}\n${sec.content}\n\n`;
-        }
-        content += `\nSIGNATURES:\n`;
-        for (const sb of docToExport.signature_blocks) {
-          content += `\nParty: ${sb.party_name} (${sb.party_company || ''})\nTitle: ${sb.party_role || 'Signatory'}\nSignature: __________________\n${sb.date_placeholder || 'Date: _____________'}\n`;
-        }
-        content += `\nNOTICE: ${docToExport.disclaimer}\n`;
-
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${safeTitle}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showToast(`Exported ${safeTitle}.txt`, 'success');
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${safeTitle}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // 1. Direct high-fidelity client export (real PDF, real DOCX, or TXT)
+      await exportDocument(docToExport, format);
       showToast(`Exported ${safeTitle}.${format}`, 'success');
-    } catch (e: any) {
-      showToast(`Export error: ${e.message}`, 'error');
+    } catch (clientErr) {
+      console.warn('Client export warning, trying server export fallback:', clientErr);
+      try {
+        const endpoint = `/api/export-direct/${format}`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(docToExport)
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${safeTitle}.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          showToast(`Exported ${safeTitle}.${format}`, 'success');
+          return;
+        }
+      } catch (serverErr: any) {
+        showToast(`Export error: ${serverErr?.message || 'Failed to export document'}`, 'error');
+      }
     } finally {
       setDownloadingFormat(null);
     }
@@ -511,11 +529,18 @@ export default function App() {
   };
 
   // Filtered documents
-  const filteredDocs = documents.filter(d =>
-    d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.document_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.parties.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredDocs = documents.filter(d => {
+    const matchesSearch =
+      !searchQuery.trim() ||
+      d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.document_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.parties.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesCategory =
+      selectedCategory === 'all' || getDocumentCategory(d) === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className={`min-h-screen flex flex-col md:flex-row ${darkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
@@ -1152,22 +1177,27 @@ export default function App() {
                       {isStep1Valid ? `Selected: ${wizardData.document_type}` : 'Select a document type to continue'}
                     </span>
                     <button
-                      disabled={!isStep1Valid}
-                      onClick={() => {
-                        setAttemptedSubmit(true);
-                        if (!validateStep(1)) return;
-                        setValidationError('');
-                        setAttemptedSubmit(false);
-                        setWizardStep(2);
-                      }}
+                      disabled={!isStep1Valid || processingStep === 2}
+                      onClick={() => handleContinueToStep(1, 2)}
                       className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-semibold text-sm transition-all ${
-                        isStep1Valid
-                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm'
+                        isStep1Valid && processingStep !== 2
+                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm active:scale-95'
+                          : processingStep === 2
+                          ? 'bg-slate-900 dark:bg-amber-600 text-white ring-2 ring-amber-400/50 scale-[0.98]'
                           : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <span>Continue to Parties</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {processingStep === 2 ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                          <span>Verifying & Proceeding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Continue to Parties</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1400,22 +1430,27 @@ export default function App() {
                       ← Back
                     </button>
                     <button
-                      disabled={!isStep2Valid}
-                      onClick={() => {
-                        setAttemptedSubmit(true);
-                        if (!validateStep(2)) return;
-                        setValidationError('');
-                        setAttemptedSubmit(false);
-                        setWizardStep(3);
-                      }}
+                      disabled={!isStep2Valid || processingStep === 3}
+                      onClick={() => handleContinueToStep(2, 3)}
                       className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-semibold text-sm transition-all order-1 sm:order-2 ${
-                        isStep2Valid
-                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm'
+                        isStep2Valid && processingStep !== 3
+                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm active:scale-95'
+                          : processingStep === 3
+                          ? 'bg-slate-900 dark:bg-amber-600 text-white ring-2 ring-amber-400/50 scale-[0.98]'
                           : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <span>Continue to Terms & Conditions</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {processingStep === 3 ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                          <span>Verifying & Proceeding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Continue to Terms & Conditions</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1545,22 +1580,27 @@ export default function App() {
                       ← Back
                     </button>
                     <button
-                      disabled={!isStep3Valid}
-                      onClick={() => {
-                        setAttemptedSubmit(true);
-                        if (!validateStep(3)) return;
-                        setValidationError('');
-                        setAttemptedSubmit(false);
-                        setWizardStep(4);
-                      }}
+                      disabled={!isStep3Valid || processingStep === 4}
+                      onClick={() => handleContinueToStep(3, 4)}
                       className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-semibold text-sm transition-all order-1 sm:order-2 ${
-                        isStep3Valid
-                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm'
+                        isStep3Valid && processingStep !== 4
+                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm active:scale-95'
+                          : processingStep === 4
+                          ? 'bg-slate-900 dark:bg-amber-600 text-white ring-2 ring-amber-400/50 scale-[0.98]'
                           : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <span>Continue to Effective Date</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {processingStep === 4 ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                          <span>Verifying & Proceeding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Continue to Effective Date</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1701,22 +1741,27 @@ export default function App() {
                       ← Back
                     </button>
                     <button
-                      disabled={!isStep4Valid}
-                      onClick={() => {
-                        setAttemptedSubmit(true);
-                        if (!validateStep(4)) return;
-                        setValidationError('');
-                        setAttemptedSubmit(false);
-                        setWizardStep(5);
-                      }}
+                      disabled={!isStep4Valid || processingStep === 5}
+                      onClick={() => handleContinueToStep(4, 5)}
                       className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-semibold text-sm transition-all order-1 sm:order-2 ${
-                        isStep4Valid
-                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm'
+                        isStep4Valid && processingStep !== 5
+                          ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer shadow-sm active:scale-95'
+                          : processingStep === 5
+                          ? 'bg-slate-900 dark:bg-amber-600 text-white ring-2 ring-amber-400/50 scale-[0.98]'
                           : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                       }`}
                     >
-                      <span>Review Before Generation</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {processingStep === 5 ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                          <span>Verifying & Proceeding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Review Before Generation</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1859,28 +1904,13 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Generation loading indicator */}
+                  {/* Generation loading indicator & Animation */}
                   {isGenerating ? (
-                    <div className="p-6 rounded-xl bg-slate-900 text-white space-y-4">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
-                          <span className="font-semibold">Synthesizing legal document with Google Gemini AI...</span>
-                        </div>
-                        <span className="font-mono">{generationProgress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                        <div
-                          className="bg-amber-500 h-full transition-all duration-300"
-                          style={{ width: `${generationProgress}%` }}
-                        />
-                      </div>
-                      <div className="text-[11px] text-slate-400 space-y-1">
-                        <div>✓ Understanding input parameters and party identities</div>
-                        <div>✓ Constructing structured agreement covenants and recitals</div>
-                        <div>● Drafting definitions, payment covenants, and jurisdiction terms</div>
-                        <div>○ Formatting terms table and signature blocks</div>
-                      </div>
+                    <div className="py-2">
+                      <DocumentGeneratingAnimation
+                        progress={generationProgress}
+                        wizardData={wizardData}
+                      />
                     </div>
                   ) : (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -1891,16 +1921,27 @@ export default function App() {
                         ← Edit Inputs
                       </button>
                       <button
-                        disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid}
+                        disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || isGenerating}
                         onClick={handleGenerate}
-                        className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-sm shadow-md transition-all order-1 sm:order-2 ${
-                          isStep1Valid && isStep2Valid && isStep3Valid && isStep4Valid
-                            ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer'
+                        className={`w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm shadow-md transition-all order-1 sm:order-2 ${
+                          isStep1Valid && isStep2Valid && isStep3Valid && isStep4Valid && !isGenerating
+                            ? 'bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white cursor-pointer active:scale-95'
+                            : isGenerating
+                            ? 'bg-amber-600 text-white ring-2 ring-amber-400/50 scale-[0.98]'
                             : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
                         }`}
                       >
-                        <Sparkles className="w-4 h-4 text-amber-400" />
-                        <span>Generate Legal Document</span>
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                            <span>Synthesizing Legal Document...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-amber-400" />
+                            <span>Generate Legal Document</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -2328,6 +2369,13 @@ export default function App() {
                 </div>
               </div>
 
+              {/* DOCUMENT CATEGORY FILTER COMPONENT */}
+              <DocumentCategoryFilter
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                documents={documents}
+              />
+
               {filteredDocs.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {filteredDocs.map(doc => (
@@ -2336,11 +2384,23 @@ export default function App() {
                       className="p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-all group"
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 uppercase tracking-wider">
-                            {doc.document_type}
-                          </span>
-                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                        <div className="flex items-center justify-between mb-2 gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-500 uppercase tracking-wider">
+                              {doc.document_type}
+                            </span>
+                            {(() => {
+                              const cat = getDocumentCategory(doc);
+                              const catOpt = CATEGORY_OPTIONS.find(c => c.id === cat);
+                              if (!catOpt || catOpt.id === 'all') return null;
+                              return (
+                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${catOpt.color.badgeBg} ${catOpt.color.badgeText}`}>
+                                  {catOpt.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold shrink-0">
                             v{doc.version}
                           </span>
                         </div>
@@ -2393,10 +2453,41 @@ export default function App() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <FolderOpen className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">No documents match your query</h3>
-                  <p className="text-xs text-slate-500 mt-1">Try another search keyword or create a new document.</p>
+                <div className="text-center py-12 px-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <EmptyDocumentsIllustration className="w-64 max-w-xs mx-auto mb-2" />
+                  <div className="max-w-md mx-auto space-y-1.5">
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                      {selectedCategory !== 'all'
+                        ? `No ${CATEGORY_OPTIONS.find(c => c.id === selectedCategory)?.label || ''} documents found`
+                        : 'Your Document Archive is Ready'}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {selectedCategory !== 'all'
+                        ? `You don't have any legal instruments categorized under ${CATEGORY_OPTIONS.find(c => c.id === selectedCategory)?.label || ''}.`
+                        : 'Draft enterprise-grade agreements, contracts, NDAs, and corporate covenants with AI assistance in minutes.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    {selectedCategory !== 'all' || searchQuery ? (
+                      <button
+                        onClick={() => {
+                          setSelectedCategory('all');
+                          setSearchQuery('');
+                        }}
+                        className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                      >
+                        Reset Filters
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleStartNewBlankDocument}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Create First Document</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

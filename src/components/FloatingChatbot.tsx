@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import { StructuredDocument } from '../types/document';
+import { RobotAvatar } from './RobotAvatar';
 
 interface ChatMessage {
   id: string;
@@ -267,32 +268,27 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentDoc, on
       {/* FLOATING TRIGGER BUTTON (Bottom Right) */}
       {/* ============================================================ */}
       {!isOpen && (
-        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 animate-fadeIn">
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 animate-fadeIn flex items-center gap-2.5">
+          {/* Friendly prompt bubble on desktop */}
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 dark:bg-slate-800/95 text-white text-[11px] font-semibold shadow-lg border border-sky-400/40 backdrop-blur-sm pointer-events-none transition-all group-hover:scale-105">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Chat with AI Counsel</span>
+          </div>
+
           <button
             onClick={() => setIsOpen(true)}
-            className="group flex items-center gap-2.5 px-3.5 sm:px-4 py-3 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white shadow-xl hover:shadow-2xl border border-slate-700 dark:border-amber-400/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-            aria-label="Open Gemini 3.8 Flash AI Counsel Chatbot"
-            title="Chat with LegalEase AI (Gemini 3.8 Flash)"
+            className="group relative flex items-center justify-center p-1 rounded-full bg-gradient-to-br from-sky-400 via-blue-600 to-slate-950 shadow-xl hover:shadow-[0_0_24px_rgba(56,189,248,0.65)] border-2 border-sky-300/80 dark:border-sky-400/60 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer"
+            aria-label="Open AI Robot Chatbot"
+            title="Chat with LegalEase AI Robot"
           >
-            <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 animate-pulse" />
-              </div>
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 dark:border-amber-600 animate-ping" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 dark:border-amber-600" />
+            {/* Slightly smaller Robot Avatar */}
+            <div className="relative w-12 h-12 sm:w-13 sm:h-13 flex items-center justify-center overflow-visible">
+              <RobotAvatar size={50} className="transition-transform duration-300 group-hover:scale-105" />
             </div>
 
-            <div className="text-left pr-1">
-              <div className="text-xs font-bold tracking-tight leading-none flex items-center gap-1.5">
-                <span>AI Legal Counsel</span>
-                <span className="hidden sm:inline-block text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-semibold uppercase">
-                  AI Counsel
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 dark:text-amber-100/80 leading-none mt-1 hidden sm:block">
-                Ask clauses, terms & law
-              </div>
-            </div>
+            {/* Glowing online beacon */}
+            <span className="absolute top-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900 animate-ping" />
+            <span className="absolute top-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
           </button>
         </div>
       )}
@@ -302,28 +298,28 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentDoc, on
       {/* ============================================================ */}
       {isOpen && (
         <div
-          className={`fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-24px)] sm:w-[410px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden transition-all duration-200 animate-fadeIn ${
-            isMinimized ? 'h-14' : 'h-[580px] max-h-[82vh]'
+          className={`fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-24px)] sm:w-[360px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden transition-all duration-200 animate-fadeIn ${
+            isMinimized ? 'h-13' : 'h-[500px] max-h-[76vh]'
           }`}
         >
           {/* CHAT HEADER */}
-          <div className="flex items-center justify-between p-3.5 sm:p-4 bg-slate-900 text-white border-b border-slate-800 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
-                <Sparkles className="w-4 h-4" />
+          <div className="flex items-center justify-between p-3 sm:p-3.5 bg-slate-900 text-white border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-sky-950/80 border border-sky-400/40 flex items-center justify-center shrink-0 overflow-visible p-0.5 shadow-sm">
+                <RobotAvatar size={30} />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-xs sm:text-sm tracking-tight text-white leading-none">
-                    LegalEase AI Counsel
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-xs sm:text-xs tracking-tight text-white leading-none">
+                    LegalEase AI Robot
                   </h3>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    AI Active
+                  <span className="text-[8px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                    Online
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-1">
+                <div className="flex items-center gap-1 text-[9px] text-slate-400 mt-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span>Ready for contract review & clause drafting</span>
+                  <span>Contract review & clause drafting</span>
                 </div>
               </div>
             </div>
@@ -447,10 +443,13 @@ export const FloatingChatbot: React.FC<FloatingChatbotProps> = ({ currentDoc, on
 
                 {isLoading && (
                   <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 rounded-full bg-sky-950/80 border border-sky-400/40 flex items-center justify-center shrink-0 overflow-visible p-0.5">
+                      <RobotAvatar size={24} className="animate-bounce" />
+                    </div>
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl rounded-bl-xs p-3 shadow-xs">
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                        <span>Gemini 3.8 Flash is analyzing & drafting...</span>
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <Sparkles className="w-3.5 h-3.5 text-sky-500 animate-spin" />
+                        <span>AI Legal Robot is analyzing & drafting...</span>
                       </div>
                     </div>
                   </div>

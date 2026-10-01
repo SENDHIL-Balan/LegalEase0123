@@ -1,0 +1,111 @@
+<svg width="420" height="300" viewBox="0 0 420 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="210" y1="20" x2="210" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F8FAFC" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#E2E8F0" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="160" y1="180" x2="260" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="sheetGrad1" x1="140" y1="50" x2="280" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+    <linearGradient id="sheetGrad2" x1="120" y1="65" x2="260" y2="245" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="100" y1="100" x2="320" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0.05"/>
+    </linearGradient>
+    <filter id="cardShadow" x="90" y="45" width="240" height="220" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0F172A" flood-opacity="0.08"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.04"/>
+    </filter>
+    <filter id="glow" x="140" y="150" width="140" height="140" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#D97706" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient Glow Background -->
+  <circle cx="210" cy="150" r="120" fill="url(#bgGrad)" />
+  <circle cx="210" cy="150" r="100" fill="url(#accentGrad)" />
+
+  <!-- Background Isometric Grid Lines -->
+  <path d="M110 180L210 230L310 180" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.7"/>
+  <path d="M130 190L210 230L290 190" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+
+  <!-- Back Document Sheet (Tilted) -->
+  <g transform="rotate(-6 195 145)" filter="url(#cardShadow)">
+    <rect x="135" y="55" width="125" height="165" rx="8" fill="url(#sheetGrad2)" stroke="#E2E8F0" stroke-width="1"/>
+    <!-- Simulated Legal Content Lines -->
+    <rect x="150" y="75" width="55" height="5" rx="2.5" fill="#94A3B8" fill-opacity="0.4"/>
+    <rect x="150" y="90" width="95" height="3" rx="1.5" fill="#CBD5E1" fill-opacity="0.6"/>
+    <rect x="150" y="100" width="85" height="3" rx="1.5" fill="#CBD5E1" fill-opacity="0.6"/>
+    <rect x="150" y="110" width="90" height="3" rx="1.5" fill="#CBD5E1" fill-opacity="0.6"/>
+    <rect x="150" y="125" width="70" height="3" rx="1.5" fill="#CBD5E1" fill-opacity="0.5"/>
+    <rect x="150" y="135" width="92" height="3" rx="1.5" fill="#CBD5E1" fill-opacity="0.5"/>
+  </g>
+
+  <!-- Middle Document Sheet (Slight tilt) -->
+  <g transform="rotate(4 215 155)" filter="url(#cardShadow)">
+    <rect x="150" y="58" width="128" height="170" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+    <!-- Folded Corner Accent -->
+    <path d="M258 58L278 78H264C260.686 78 258 75.3137 258 72V58Z" fill="#E2E8F0"/>
+    <rect x="165" y="80" width="60" height="5" rx="2.5" fill="#3B82F6" fill-opacity="0.5"/>
+    <rect x="165" y="96" width="98" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.5"/>
+    <rect x="165" y="106" width="90" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.5"/>
+    <rect x="165" y="116" width="75" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.4"/>
+  </g>
+
+  <!-- Front Prime Document Folio -->
+  <g filter="url(#cardShadow)">
+    <rect x="145" y="60" width="130" height="172" rx="10" fill="url(#sheetGrad1)" stroke="#CBD5E1" stroke-width="1.2"/>
+    
+    <!-- Top Header Bar -->
+    <rect x="162" y="78" width="65" height="6" rx="3" fill="#0F172A"/>
+    <circle cx="258" cy="81" r="3" fill="#D97706"/>
+
+    <line x1="162" y1="94" x2="258" y2="94" stroke="#E2E8F0" stroke-width="1"/>
+
+    <!-- Document Section Blocks -->
+    <rect x="162" y="104" width="45" height="4" rx="2" fill="#64748B"/>
+    <rect x="162" y="114" width="96" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.7"/>
+    <rect x="162" y="122" width="88" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.7"/>
+    <rect x="162" y="130" width="92" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.5"/>
+
+    <rect x="162" y="142" width="40" height="4" rx="2" fill="#64748B"/>
+    <rect x="162" y="152" width="96" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.7"/>
+    <rect x="162" y="160" width="84" height="3" rx="1.5" fill="#94A3B8" fill-opacity="0.5"/>
+
+    <!-- Signature Line Placeholder -->
+    <path d="M162 188C172 184 178 190 190 186C198 183 204 187 214 185" stroke="#0F172A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="162" y1="192" x2="220" y2="192" stroke="#94A3B8" stroke-width="1"/>
+    <circle cx="164" cy="192" r="1.5" fill="#0F172A"/>
+  </g>
+
+  <!-- Golden Notary Seal & Ribbon -->
+  <g filter="url(#glow)">
+    <!-- Silk Ribbons -->
+    <path d="M242 195L236 226L246 221L256 226L250 195Z" fill="#B45309"/>
+    <path d="M232 196L222 224L232 219L242 224L238 196Z" fill="#D97706"/>
+
+    <!-- Seal Outer Rosette -->
+    <circle cx="242" cy="195" r="17" fill="url(#goldGrad)" stroke="#FDE68A" stroke-width="1.5"/>
+    <circle cx="242" cy="195" r="13" fill="none" stroke="#FEF3C7" stroke-width="1" stroke-dasharray="2 2"/>
+    
+    <!-- Legal Scales Emblem in Seal -->
+    <path d="M242 188V201M237 191H247M236 193L234 197H238L236 193ZM248 193L246 197H250L248 193ZM240 201H244" stroke="#FFFFFF" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Floating Sparkles / Minimalist Accents -->
+  <g opacity="0.8">
+    <path d="M115 100L117 105L122 107L117 109L115 114L113 109L108 107L113 105L115 100Z" fill="#F59E0B"/>
+    <path d="M305 130L306.5 134L310.5 135.5L306.5 137L305 141L303.5 137L299.5 135.5L303.5 134L305 130Z" fill="#3B82F6"/>
+    <circle cx="295" cy="85" r="2.5" fill="#D97706" opacity="0.6"/>
+    <circle cx="120" cy="155" r="2" fill="#64748B" opacity="0.5"/>
+  </g>
+</svg>
